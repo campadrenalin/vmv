@@ -18,6 +18,9 @@ VmvAPI = {
         for (validator_name in this.$options.validators) {
             this.__proto__[validator_name] = _.bind(this.mkRelation, this, validator_name);
         }
+        for (modifier_name in this.$options.modifiers) {
+            this.__proto__[modifier_name] = _.bind(this.mkModifier, this, modifier_name);
+        }
     },
     methods: {
         mkRelation: function(validator_name) {
@@ -41,6 +44,13 @@ VmvAPI = {
                 rels[input][validator_name] = rel;
             }
             return this;
+        },
+        mkModifier: function(modifier_name) {
+            var args = _.rest(arguments);
+            var mod  = this.$options.modifiers[modifier_name];
+            return function(rel) {
+                mod.apply(rel, args);
+            }
         }
     },
     computed: {
@@ -52,16 +62,32 @@ VmvAPI = {
         match: match,
         alphaNum: alphaNum,
     },
+    modifiers: {
+        throttle: function(ms) { this.ask = _.throttle(this.ask, ms) },
+        debounce: function(ms) { this.ask = _.debounce(this.ask, ms) },
+    },
     relations: {}
 };
 
 VmvRelation = Vue.extend({
     props: ["parent", "inputs", "callback", "args", "mods"],
+    created() {
+        for (m in this.mods) {
+            this.mods[m](this);
+        }
+    },
     data: function() {
+        var self = this;
         return {
             dirty:   false,
             result:  undefined,
             error:   undefined,
+            cb: function() {
+                var result = self.callback.apply(self, arguments);
+                return result === true  ? Promise.resolve(result)
+                    :  result === false ? Promise.reject(result)
+                    :                     result;
+            }
         }
     },
     computed: {
@@ -91,17 +117,11 @@ VmvRelation = Vue.extend({
             this.dirty = true;
             this.result = undefined;
             this.error  = undefined;
-            var result = this.callback.apply(this, [this._inputs].concat(this.args));
-            if (result === true) {
-                this.resolve(result)
-            } else if (result === false) {
-                this.reject(result)
-            } else {
-                // TODO: invalidate in-flight work that no longer matches input data
-                result
-                    .then(_.bind(this.resolve, this))
-                    .catch(_.bind(this.reject, this));
-            }
+            var promise = this.cb.apply(this, _.flatten([this._inputs, this.args]));
+            // TODO: invalidate in-flight work that no longer matches input data
+            promise
+                .then(_.bind(this.resolve, this))
+                .catch(_.bind(this.reject, this));
         },
         resolve: function(data) {
             this.result = data || true;

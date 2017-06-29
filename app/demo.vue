@@ -16,7 +16,7 @@ module.exports = {
     mixins: [require('vmv')],
     created() {
         this.alphaNum('name')
-            .match('goodness', [/good/i]);
+            .match('goodness', [/good/i], this.debounce(400));
     },
     data: function() {
         return {
