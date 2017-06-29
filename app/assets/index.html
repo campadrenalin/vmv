@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>VMV playground</title>
+    </head>
+    <body>
+        <h1>VMV playground</h1>
+        <div id="vmv-form"></div>
+        <script src="/vendor.js"></script>
+        <script src="/app.js"></script>
+        <script>
+            var Vue = require('vue');
+            demo = new Vue(require('demo.vue')).$mount('#vmv-form');
+        </script>
+    </body>
+</html>
