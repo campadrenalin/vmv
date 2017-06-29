@@ -16,7 +16,7 @@ module.exports = {
     mixins: [require('kosher')],
     created() {
         this.alphaNum('name')
-            .match('goodness', [/good/i], this.debounce(400));
+            .match('goodness', [/good/i], this.debounce(200), this.delay(138));
     },
     data: function() {
         return {

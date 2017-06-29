@@ -65,6 +65,18 @@ VmvAPI = {
     modifiers: {
         throttle: function(ms) { this.ask = _.throttle(this.ask, ms) },
         debounce: function(ms) { this.ask = _.debounce(this.ask, ms) },
+        delay: function(ms) {
+            var rel   = this;
+            var inner = this.cb;
+            this.cb = function() {
+                var inner_promise = inner.apply(rel, arguments); // Guaranteed to be a promise
+                return new Promise(function(outer_resolve, outer_reject) {
+                    inner_promise
+                        .then(function(data) { _.delay(outer_resolve, ms, data) })
+                        .catch(function(data){ _.delay(outer_reject,  ms, data) })
+                })
+            }
+        },
     },
     relations: {}
 };
