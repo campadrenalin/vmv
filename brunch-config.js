@@ -1,8 +1,4 @@
 module.exports = {
-    npm: {
-        enabled: true,
-        whitelist: ["underscore", "vue"]
-    },
     files: {
         javascripts: {
             joinTo: {

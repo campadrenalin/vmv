@@ -1,17 +1,27 @@
 var _ = require('underscore');
-var Vue = require('vue');
 
-VmvAPI = Vue.extend({
+// TODO: Remove, hack
+var Vue = require('vue');
+require('vueify/lib/insert-css');
+
+function match(inputs, regex) {
+    return _.every(_.values(inputs), function(item) {
+        return !!item.match(regex);
+    });
+}
+function alphaNum(inputs) {
+    return match(inputs, /^[a-zA-Z0-9]*$/);
+}
+
+VmvAPI = {
     created() {
-        var self = this;
         for (validator_name in this.$options.validators) {
-            this.__proto__[validator_name] = function() {
-                return self.mkRelation(validator_name, arguments)
-            }
+            this.__proto__[validator_name] = _.bind(this.mkRelation, this, validator_name);
         }
     },
     methods: {
-        mkRelation: function(validator_name, init_args) {
+        mkRelation: function(validator_name) {
+            var init_args = _.rest(arguments);
             var rel = new VmvRelation({
                 propsData: {
                     parent : this,
@@ -33,13 +43,17 @@ VmvAPI = Vue.extend({
             return this;
         }
     },
-    validators: {
-        alphaNum: function(inputs, arguments) {
-            return true
+    computed: {
+        '$v': function() {
+            return this.$options.relations;
         }
     },
+    validators: {
+        match: match,
+        alphaNum: alphaNum,
+    },
     relations: {}
-});
+};
 
 VmvRelation = Vue.extend({
     props: ["parent", "inputs", "callback", "args", "mods"],
@@ -56,7 +70,7 @@ VmvRelation = Vue.extend({
         },
         state: function() {
             return this.pending ? 'pending'
-                :  this.okay    ? 'okay'
+                :  this.result  ? 'valid'
                 :  this.error   ? 'error'
                 :                 ''
                 ;
@@ -77,7 +91,7 @@ VmvRelation = Vue.extend({
             this.dirty = true;
             this.result = undefined;
             this.error  = undefined;
-            var result = this.callback(this._inputs, this.arguments);
+            var result = this.callback.apply(this, [this._inputs].concat(this.args));
             if (result === true) {
                 this.resolve(result)
             } else if (result === false) {
@@ -90,14 +104,12 @@ VmvRelation = Vue.extend({
             }
         },
         resolve: function(data) {
-            this.dirty  = false;
             this.result = data || true;
             this.error  = false;
         },
         reject: function(data) {
-            this.dirty  = false;
             this.result = false;
-            this.error  = data || false;
+            this.error  = data || true;
         },
     },
 });
