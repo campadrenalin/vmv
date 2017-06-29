@@ -13,7 +13,7 @@
 
 <script>
 module.exports = {
-    mixins: [require('vmv')],
+    mixins: [require('kosher')],
     created() {
         this.alphaNum('name')
             .match('goodness', [/good/i], this.debounce(400));
