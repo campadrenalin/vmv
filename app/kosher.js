@@ -110,18 +110,21 @@ VmvRelation = Vue.extend({
         }
     },
     watch: {
-        _inputs: function() { this.ask(); }
+        _inputs: function() { this.reset(); this.ask(); }
     },
     methods: {
         ask: function() {
-            this.dirty = true;
-            this.result = undefined;
-            this.error  = undefined;
+            this.reset(true);
             var promise = this.cb.apply(this, _.flatten([this._inputs, this.args]));
             // TODO: invalidate in-flight work that no longer matches input data
             promise
                 .then(_.bind(this.resolve, this))
                 .catch(_.bind(this.reject, this));
+        },
+        reset: function(dirty) {
+            this.dirty = dirty || false;
+            this.result = undefined;
+            this.error  = undefined;
         },
         resolve: function(data) {
             this.result = data || true;
