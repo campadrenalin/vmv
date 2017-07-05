@@ -13,6 +13,96 @@ function alphaNum(inputs) {
     return match(inputs, /^[a-zA-Z0-9]*$/);
 }
 
+Kosher = {
+    data: {
+        '$k_fields': {},
+        '$k_responses': {},
+    },
+    computed: {
+        '$k': function() {
+            return {
+                api: this.$k_api,
+                f: _.mapObject(this.$data.$k_fields, _.bind(this.computeField, this)),
+            }
+        },
+        '$k_api': function() {
+            return _.extend({},
+                _.mapObject(this.$options.validators, _.bind(this.mkValidator, this)),
+                this.$options.modifiers
+            );
+        },
+    },
+    methods: {
+        mkValidator: function(func, name) {
+            var self = this;
+            return function(inputs) {
+                var response_key = name+'('+inputs+')';
+                if (!self.$data.$k_responses[response_key])
+                    Vue.set(self.$data.$k_responses, response_key, {});
+                if (!self.$data.$k_fields[inputs])
+                    Vue.set(self.$data.$k_fields, inputs, []);
+
+                self.$data.$k_fields[inputs].push(response_key);
+
+                self.$watch(inputs, function(newVal, oldVal) {
+                    Vue.set(self.$data.$k_responses[response_key], 'latest', newVal);
+                    function store(payload, success) {
+                        Vue.set(self.$data.$k_responses[response_key], newVal, {
+                            payload: payload,
+                            success: success,
+                        });
+                    }
+
+                    Promise.reject(newVal.length % 2)
+                        .then( function(payload) { store(payload, !!payload) })
+                        .catch(function(payload) { store(payload, false) });
+                });
+
+                return self.$k_api;
+            }
+        },
+        computeField: function(field, name) {
+            var self = this;
+            var dirty = false
+            var responses = _.map(field, function(r) {
+                var resp_data = self.$data.$k_responses[r];
+                if (resp_data.latest !== undefined) dirty = true;
+                return resp_data[resp_data.latest]
+            });
+            var compact = _.compact(responses);
+            var err = _.find(compact, function(x) { return !x.success });
+
+            return {
+                valid:   dirty && _.every(compact, _.property('success')),
+                error:   dirty && (err ? (err.payload || true) : false),
+                message: dirty && (err && _.isString(err.payload) ? err.payload : undefined),
+                pending: dirty && (compact.length != responses.length),
+                dirty:   dirty,
+            };
+        },
+    },
+    validators: {
+        match: match,
+        alphaNum: alphaNum,
+    },
+    modifiers: {
+        throttle: function(ms) { this.ask = _.throttle(this.ask, ms) },
+        debounce: function(ms) { this.ask = _.debounce(this.ask, ms) },
+        delay: function(ms) {
+            var rel   = this;
+            var inner = this.cb;
+            this.cb = function() {
+                var inner_promise = inner.apply(rel, arguments); // Guaranteed to be a promise
+                return new Promise(function(outer_resolve, outer_reject) {
+                    inner_promise
+                        .then(function(data) { _.delay(outer_resolve, ms, data) })
+                        .catch(function(data){ _.delay(outer_reject,  ms, data) })
+                })
+            }
+        },
+    },
+};
+
 VmvAPI = {
     created() {
         for (validator_name in this.$options.validators) {
@@ -151,4 +241,4 @@ VmvRelation = Vue.extend({
 
 VmvAPI.Relation = VmvRelation;
 
-module.exports = VmvAPI;
+module.exports = Kosher;

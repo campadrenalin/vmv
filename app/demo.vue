@@ -1,7 +1,8 @@
 <template>
 <form>
-  <label>Nickname: <input :class="$v.name.alphaNum.state" v-model="name" type="text"></label>
-  <label>Be good: <input :class="$v.goodness.match.state"  v-model="goodness" type="text"></label>
+  <label>Nickname: <input :class="$k.f.name" v-model="name" type="text"></label>
+  <label>Be good: <input :class="$k.f.goodness" v-model="goodness" type="text"></label>
+  <span class="error" v-if="$k.f.goodness.error">{{ $k.f.goodness.message || "That's not quite right" }}</span>
 </form>
 </template>
 
@@ -15,8 +16,9 @@
 module.exports = {
     mixins: [require('kosher')],
     created() {
-        this.alphaNum('name')
-            .match('goodness', [/good/i], this.debounce(200), this.delay(138));
+        var $k = this.$k.api;
+        $k.alphaNum('name')
+          .match('goodness', [/good/i], $k.debounce(200), $k.delay(138));
     },
     data: function() {
         return {
