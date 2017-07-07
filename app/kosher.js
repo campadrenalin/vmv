@@ -184,7 +184,10 @@ Kosher = {
         },
         '$k_api': function() {
             this.$options.validators = _.extend({}, default_validators, this.$options.validators);
-            return _.extend({},
+            return _.extend(
+                {
+                    group: _.bind(this.group, this),
+                },
                 _.mapObject(this.$options.validators, _.bind(this.mkValidator, this)),
                 _.mapObject(this.$options.modifiers, _.bind(this.mkModifier, this)),
             );
@@ -207,10 +210,8 @@ Kosher = {
                 self.vue_kosher.last_input_def = relation.inputs;
 
                 for (i in relation.input_keys) {
-                    var input = relation.input_keys[i];
-                    var field = self.vue_kosher.fields[input] || new KosherField();
-                    Vue.set(self.vue_kosher.fields, input, field);
-                    field.inputs.push(relation);
+                    var field_name = relation.input_keys[i];
+                    self.getField(field_name).inputs.push(relation);
                 }
 
                 self.$emit('kosher-response', relation.description);
@@ -225,7 +226,21 @@ Kosher = {
                     modifier_callback.apply(relation, original_args);
                 }
             }
-        }
+        },
+        getField: function(name) {
+            var field = this.vue_kosher.fields[name] || new KosherField();
+            Vue.set(this.vue_kosher.fields, name, field);
+            return field;
+        },
+        group: function(name, inputs) {
+            inputs = inputs || this.vue_kosher.last_input_def;
+            this.vue_kosher.last_input_def = inputs;
+            inputs = inputs.split(/ +/);
+
+            var g = this.getField(name);
+            g.inputs = _.map(inputs, _.bind(this.getField, this))
+            return this.$k_api;
+        },
     },
     modifiers: {
         throttle: function(ms) { this.ask = _.throttle(this.ask, ms) },
