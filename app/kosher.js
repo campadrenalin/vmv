@@ -12,6 +12,17 @@ function match(inputs, regex) {
 function alphaNum(inputs) {
     return match(inputs, /^[a-zA-Z0-9]*$/);
 }
+function minLength(inputs, len) {
+    return _.every(_.values(inputs), function(item) {
+        return item.length >= len
+    });
+}
+
+default_validators = {
+    match: match,
+    alphaNum: alphaNum,
+    minLength: minLength,
+}
 
 function promiseWrap(value) {
     return _.has(value, 'then') ? value
@@ -55,6 +66,7 @@ KosherRelation = Vue.extend({
         payload: function() { return this.latest ? this.latest.payload : undefined },
         success: function() { return this.latest ? !!this.latest.success : undefined },
         failure: function() { return this.latest ?  !this.latest.success : undefined },
+        message: function() { return this.failure ? this.payload || 'Unknown validation failure' : undefined },
 
         input_keys: function() { return this.inputs.split(/ +/) },
         response_key: function() {
@@ -72,7 +84,7 @@ KosherRelation = Vue.extend({
             return this.validator + '("' + this.inputs + '")'
         },
         summary: function() {
-            return _.pick(this, 'pending', 'payload', 'success', 'failure', 'dirty');
+            return _.pick(this, 'pending', 'payload', 'success', 'failure', 'dirty', 'message');
         },
     },
     methods: {
@@ -88,10 +100,10 @@ KosherRelation = Vue.extend({
             this.latest_key = mark_dirty ? this.response_key : undefined;
         },
         store: function(resp_key, ok, data) {
-            this.responses[resp_key] = {
+            Vue.set(this.responses, resp_key, {
                 payload: data || ok,
                 success: ok,
-            }
+            });
             this.parent.$emit('kosher-response', this.description);
         },
         resolve: function(resp_key, data) { this.store(resp_key, true,  data) },
@@ -127,13 +139,32 @@ Kosher = {
         vue_kosher: {
             'relations': {}, 'r': {},
             'fields': {},    'f': {},
+            'err': {},
         },
     }},
     created: function() {
         this.$on('kosher-response', function(response_name) {
             Vue.set(this.vue_kosher.r, response_name, this.vue_kosher.relations[response_name].summary);
+
             this.vue_kosher.f = _.mapObject(this.vue_kosher.fields, function(val, key){
                 return val.summary
+            });
+
+            var self = this;
+            this.vue_kosher.err = _.mapObject(self.vue_kosher.fields, function(field, field_name) {
+                function rel_filter(relation) {
+                    return _.contains(relation.input_keys, field_name)
+                }
+                function pair_it(relation) {
+                    return [relation.validator, relation.message]
+                }
+
+                return _.chain(self.vue_kosher.relations)
+                    .pick(rel_filter)
+                    .values()
+                    .map(pair_it)
+                    .object()
+                    .value()
             });
         })
     },
@@ -144,9 +175,10 @@ Kosher = {
             return k;
         },
         '$k_api': function() {
+            this.$options.validators = _.extend({}, default_validators, this.$options.validators);
             return _.extend({},
                 _.mapObject(this.$options.validators, _.bind(this.mkValidator, this)),
-                this.$options.modifiers
+                _.mapObject(this.$options.modifiers, _.bind(this.mkModifier, this)),
             );
         },
     },
@@ -177,10 +209,14 @@ Kosher = {
                 return self.$k_api;
             }
         },
-    },
-    validators: {
-        match: match,
-        alphaNum: alphaNum,
+        mkModifier: function(modifier_callback, modifier_name) {
+            return function() {
+                var original_args = arguments;
+                return function(relation) {
+                    modifier_callback.apply(relation, original_args);
+                }
+            }
+        }
     },
     modifiers: {
         throttle: function(ms) { this.ask = _.throttle(this.ask, ms) },
