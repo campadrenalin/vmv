@@ -41,14 +41,7 @@ KosherRelation = Vue.extend({
         for (m in this.mods) {
             this.mods[m](this);
         }
-        for (i in this.input_keys) {
-            var input = this.input_keys[i];
-            this.parent.$watch(input, function(newVal, oldVal){
-                Vue.set(self.input_object, input, newVal);
-                self.reset();
-                self.ask();
-            }, { deep: true });
-        }
+        _.each(this.input_keys, this.watch_input, this);
     },
     data: function() {
         var self = this;
@@ -111,6 +104,20 @@ KosherRelation = Vue.extend({
         },
         resolve: function(resp_key, data) { this.store(resp_key, true,  data) },
         reject:  function(resp_key, data) { this.store(resp_key, false, data) },
+
+        watch_input: function(input_key) {
+            console.log(this.description, input_key);
+            this.parent.$watch(
+                input_key,
+                _.bind(this.watch_callback, this, input_key),
+                { deep: true },
+            );
+        },
+        watch_callback: function(input_key, newVal, oldVal) {
+            Vue.set(this.input_object, input_key, newVal);
+            this.reset();
+            this.ask();
+        },
     },
 });
 
