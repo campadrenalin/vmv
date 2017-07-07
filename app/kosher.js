@@ -17,6 +17,9 @@ function minLength(inputs, len) {
         return item.length >= len
     });
 }
+function required(inputs) {
+    return _.every(_.values(inputs));
+}
 
 default_validators = {
     match: match,
@@ -24,7 +27,7 @@ default_validators = {
     email:    function(inputs) { return match(inputs, email_re) },
 
     minLength: minLength,
-    required: function(inputs) { return minLength(inputs, 1) },
+    required: required,
 }
 
 function promiseWrap(value) {
@@ -85,15 +88,11 @@ KosherRelation = Vue.extend({
     },
     methods: {
         ask: function() {
-            this.reset(true);
-            var resp_key = this.response_key;
+            var resp_key = this.latest_key = this.response_key;
             var promise = this.cb.apply(this, [this.input_object].concat(this.args));
             promise
                 .then(_.bind(this.resolve, this, resp_key))
                 .catch(_.bind(this.reject, this, resp_key));
-        },
-        reset: function(mark_dirty) {
-            this.latest_key = mark_dirty ? this.response_key : undefined;
         },
         store: function(resp_key, ok, data) {
             Vue.set(this.responses, resp_key, {
@@ -106,7 +105,6 @@ KosherRelation = Vue.extend({
         reject:  function(resp_key, data) { this.store(resp_key, false, data) },
 
         watch_input: function(input_key) {
-            console.log(this.description, input_key);
             this.parent.$watch(
                 input_key,
                 _.bind(this.watch_callback, this, input_key),
@@ -115,7 +113,11 @@ KosherRelation = Vue.extend({
         },
         watch_callback: function(input_key, newVal, oldVal) {
             Vue.set(this.input_object, input_key, newVal);
-            this.reset();
+            
+            // ask() may be wrapped by modifiers, like throtle() or debounce().
+            // Set to pending => (modifier stuff) => set to upcoming response => response arrives
+            // This sets pending state early, and maintains sync of "stuff requested" and "responses expected"
+            this.latest_key = undefined;
             this.ask();
         },
     },
