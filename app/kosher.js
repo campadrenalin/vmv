@@ -4,6 +4,9 @@ var _ = require('underscore');
 var Vue = require('vue');
 require('vueify/lib/insert-css');
 
+// Borrowed from https://github.com/monterail/vuelidate/blob/master/src/validators/email.js
+const email_re = /(^$|^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$)/;
+
 function match(inputs, regex) {
     return _.every(_.values(inputs), function(item) {
         return !!item.match(regex);
@@ -11,6 +14,9 @@ function match(inputs, regex) {
 }
 function alphaNum(inputs) {
     return match(inputs, /^[a-zA-Z0-9]*$/);
+}
+function email(inputs) {
+    return match(inputs, email_re);
 }
 function minLength(inputs, len) {
     return _.every(_.values(inputs), function(item) {
@@ -21,6 +27,7 @@ function minLength(inputs, len) {
 default_validators = {
     match: match,
     alphaNum: alphaNum,
+    email: email,
     minLength: minLength,
 }
 
@@ -137,9 +144,10 @@ KosherField = Vue.extend({
 Kosher = {
     data: function() { return {
         vue_kosher: {
-            'relations': {}, 'r': {},
-            'fields': {},    'f': {},
-            'err': {},
+            last_input_def: '',
+            relations: {}, r: {},
+            fields: {},    f: {},
+            err: {},
         },
     }},
     created: function() {
@@ -189,13 +197,14 @@ Kosher = {
                 var relation = new KosherRelation({
                     propsData: {
                         parent : self,
-                        inputs : _.find(arguments, _.isString) || '',
+                        inputs : _.find(arguments, _.isString) || self.vue_kosher.last_input_def,
                         args   : _.find(arguments, _.isArray)  || [],
                         mods   : _.filter(arguments, _.isFunction),
                         validator : validator_name,
                     }
                 });
                 Vue.set(self.vue_kosher.relations, relation.description, relation);
+                self.vue_kosher.last_input_def = relation.inputs;
 
                 for (i in relation.input_keys) {
                     var input = relation.input_keys[i];
