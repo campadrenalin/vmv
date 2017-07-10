@@ -5,7 +5,7 @@ var Vue = require('vue');
 require('vueify/lib/insert-css');
 
 // Borrowed from https://github.com/monterail/vuelidate/blob/master/src/validators/email.js
-const email_re = /(^$|^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$)/;
+var email_re = /(^$|^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$)/;
 
 function match(inputs, regex) {
     return _.every(_.values(inputs), function(item) {
@@ -14,7 +14,7 @@ function match(inputs, regex) {
 }
 function minLength(inputs, len) {
     return _.every(_.values(inputs), function(item) {
-        return item.length >= len
+        return item.length >= len;
     });
 }
 function required(inputs) {
@@ -23,12 +23,12 @@ function required(inputs) {
 
 default_validators = {
     match: match,
-    alphaNum: function(inputs) { return match(inputs, /^[a-zA-Z0-9]*$/) },
-    email:    function(inputs) { return match(inputs, email_re) },
+    alphaNum: function(inputs) { return match(inputs, /^[a-zA-Z0-9]*$/); },
+    email:    function(inputs) { return match(inputs, email_re); },
 
     minLength: minLength,
     required: required,
-}
+};
 
 function promiseWrap(value) {
     return _.has(value, 'then') ? value
@@ -39,9 +39,9 @@ function promiseWrap(value) {
 
 KosherRelation = Vue.extend({
     props: ["parent", "inputs", "validator", "args", "mods"],
-    created() {
+    created: function() {
         var self = this;
-        for (m in this.mods) {
+        for (var m in this.mods) {
             this.mods[m](this);
         }
         _.each(this.input_keys, this.watch_input, this);
@@ -55,19 +55,19 @@ KosherRelation = Vue.extend({
             cb: function() {
                 return promiseWrap(self.callback.apply(self, arguments));
             }
-        }
+        };
     },
     computed: {
-        dirty  : function() { return this.latest_key != undefined },
-        latest : function() { return this.dirty ? this.responses[this.latest_key] : undefined },
-        pending: function() { return this.dirty && !this.latest },
+        dirty  : function() { return this.latest_key != undefined; },
+        latest : function() { return this.dirty ? this.responses[this.latest_key] : undefined; },
+        pending: function() { return this.dirty && !this.latest; },
 
-        payload: function() { return this.latest ? this.latest.payload : undefined },
-        success: function() { return this.latest ? !!this.latest.success : undefined },
-        failure: function() { return this.latest ?  !this.latest.success : undefined },
-        message: function() { return this.failure ? this.payload || 'Unknown validation failure' : undefined },
+        payload: function() { return this.latest ? this.latest.payload : undefined; },
+        success: function() { return this.latest ? !!this.latest.success : undefined; },
+        failure: function() { return this.latest ?  !this.latest.success : undefined; },
+        message: function() { return this.failure ? this.payload || 'Unknown validation failure' : undefined; },
 
-        input_keys: function() { return this.inputs.split(/ +/) },
+        input_keys: function() { return this.inputs.split(/ +/); },
         response_key: function() {
             var vals = _.values(this.input_object);
             return vals.length == 1              ? vals[0].toString()
@@ -80,7 +80,7 @@ KosherRelation = Vue.extend({
         },
 
         description: function() {
-            return this.validator + '("' + this.inputs + '")'
+            return this.validator + '("' + this.inputs + '")';
         },
         summary: function() {
             return _.pick(this, 'pending', 'payload', 'success', 'failure', 'dirty', 'message');
@@ -101,14 +101,14 @@ KosherRelation = Vue.extend({
             });
             this.parent.$emit('kosher-response', this.description);
         },
-        resolve: function(resp_key, data) { this.store(resp_key, true,  data) },
-        reject:  function(resp_key, data) { this.store(resp_key, false, data) },
+        resolve: function(resp_key, data) { this.store(resp_key, true,  data); },
+        reject:  function(resp_key, data) { this.store(resp_key, false, data); },
 
         watch_input: function(input_key) {
             this.parent.$watch(
                 input_key,
                 _.bind(this.watch_callback, this, input_key),
-                { deep: true },
+                { deep: true }
             );
         },
         watch_callback: function(input_key, newVal, oldVal) {
@@ -124,13 +124,15 @@ KosherRelation = Vue.extend({
 });
 
 KosherField = Vue.extend({
-    data: function() { return {
-        inputs: [],
-    }},
+    data: function() {
+        return {
+            inputs: [],
+        };
+    },
     computed: {
-        pending: function() { return _.some( this.inputs, _.property('pending')) },
-        success: function() { return _.every(this.inputs, _.property('success')) },
-        failure: function() { return _.some( this.inputs, _.property('failure')) },
+        pending: function() { return _.some( this.inputs, _.property('pending')); },
+        success: function() { return _.every(this.inputs, _.property('success')); },
+        failure: function() { return _.some( this.inputs, _.property('failure')); },
 
         state: function() {
             return this.pending ? 'pending'
@@ -147,29 +149,29 @@ KosherField = Vue.extend({
 });
 
 Kosher = {
-    data: function() { return {
-        vue_kosher: {
-            last_input_def: '',
-            relations: {}, r: {},
-            fields: {},    f: {},
-            err: {},
-        },
-    }},
+    data: function() {
+        return {
+            vue_kosher: {
+                last_input_def: '',
+                relations: {}, r: {},
+                fields: {},    f: {},
+                err: {},
+            },
+        };
+    },
     created: function() {
         this.$on('kosher-response', function(response_name) {
             Vue.set(this.vue_kosher.r, response_name, this.vue_kosher.relations[response_name].summary);
 
-            this.vue_kosher.f = _.mapObject(this.vue_kosher.fields, function(val, key){
-                return val.summary
-            });
+            this.vue_kosher.f = _.mapObject(this.vue_kosher.fields, _.property('summary'));
 
             var self = this;
             this.vue_kosher.err = _.mapObject(self.vue_kosher.fields, function(field, field_name) {
                 function rel_filter(relation) {
-                    return _.contains(relation.input_keys, field_name)
+                    return _.contains(relation.input_keys, field_name);
                 }
                 function pair_it(relation) {
-                    return [relation.validator, relation.message]
+                    return [relation.validator, relation.message];
                 }
 
                 return _.chain(self.vue_kosher.relations)
@@ -177,9 +179,9 @@ Kosher = {
                     .values()
                     .map(pair_it)
                     .object()
-                    .value()
+                    .value();
             });
-        })
+        });
     },
     computed: {
         '$k': function() {
@@ -194,7 +196,7 @@ Kosher = {
                     group: _.bind(this.group, this),
                 },
                 _.mapObject(this.$options.validators, _.bind(this.mkValidator, this)),
-                _.mapObject(this.$options.modifiers, _.bind(this.mkModifier, this)),
+                _.mapObject(this.$options.modifiers, _.bind(this.mkModifier, this))
             );
         },
     },
@@ -214,7 +216,7 @@ Kosher = {
                 Vue.set(self.vue_kosher.relations, relation.description, relation);
                 self.vue_kosher.last_input_def = relation.inputs;
 
-                for (i in relation.input_keys) {
+                for (var i in relation.input_keys) {
                     var field_name = relation.input_keys[i];
                     self.getField(field_name).inputs.push(relation);
                 }
@@ -222,15 +224,15 @@ Kosher = {
                 self.$emit('kosher-response', relation.description);
 
                 return self.$k_api;
-            }
+            };
         },
         mkModifier: function(modifier_callback, modifier_name) {
             return function() {
                 var original_args = arguments;
                 return function(relation) {
                     modifier_callback.apply(relation, original_args);
-                }
-            }
+                };
+            };
         },
         getField: function(name) {
             var field = this.vue_kosher.fields[name] || new KosherField();
@@ -243,13 +245,13 @@ Kosher = {
             inputs = inputs.split(/ +/);
 
             var g = this.getField(name);
-            g.inputs = _.map(inputs, _.bind(this.getField, this))
+            g.inputs = _.map(inputs, _.bind(this.getField, this));
             return this.$k_api;
         },
     },
     modifiers: {
-        throttle: function(ms) { this.ask = _.throttle(this.ask, ms) },
-        debounce: function(ms) { this.ask = _.debounce(this.ask, ms) },
+        throttle: function(ms) { this.ask = _.throttle(this.ask, ms); },
+        debounce: function(ms) { this.ask = _.debounce(this.ask, ms); },
         delay: function(ms) {
             var rel   = this;
             var inner = this.cb;
@@ -257,10 +259,10 @@ Kosher = {
                 var inner_promise = inner.apply(rel, arguments); // Guaranteed to be a promise
                 return new Promise(function(outer_resolve, outer_reject) {
                     inner_promise
-                        .then(function(data) { _.delay(outer_resolve, ms, data) })
-                        .catch(function(data){ _.delay(outer_reject,  ms, data) })
-                })
-            }
+                        .then(function(data) { _.delay(outer_resolve, ms, data); })
+                        .catch(function(data){ _.delay(outer_reject,  ms, data); });
+                });
+            };
         },
     },
 };
