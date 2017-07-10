@@ -1,7 +1,7 @@
 var _ = require('underscore');
 
 // TODO: Remove, hack
-var Vue = require('vue');
+var Vue = window.Vue || require('vue');
 require('vueify/lib/insert-css');
 
 // Borrowed from https://github.com/monterail/vuelidate/blob/master/src/validators/email.js
