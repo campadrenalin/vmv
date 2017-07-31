@@ -1,6 +1,6 @@
 {
   "name": "vue-kosher",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "A model validator mixin for Vue",
   "main": "app/kosher.js",
   "scripts": {
