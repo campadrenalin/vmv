@@ -17,6 +17,11 @@ function minLength(inputs, len) {
         return item.length >= len;
     });
 }
+function maxLength(inputs, len) {
+    return _.every(_.values(inputs), function(item) {
+        return item.length <= len;
+    });
+}
 function required(inputs) {
     return _.every(_.values(inputs));
 }
@@ -27,6 +32,7 @@ default_validators = {
     email:    function(inputs) { return match(inputs, email_re); },
 
     minLength: minLength,
+    maxLength: maxLength,
     required: required,
 };
 
