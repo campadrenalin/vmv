@@ -30,8 +30,17 @@ default_validators = {
     required: required,
 };
 
+function fix_jqxhr(promiselike) {
+    if (!_.has(promiselike, 'catch')) {
+        return new Promise(function(resolve, reject) {
+            promiselike.then(resolve).fail(reject);
+        });
+    }
+    return promiselike;
+}
+
 function promiseWrap(value) {
-    return _.has(value, 'then') ? value
+    return _.has(value, 'then') ? fix_jqxhr(value)
          : !!value              ? Promise.resolve(value)
          :                        Promise.reject(value)
          ;
